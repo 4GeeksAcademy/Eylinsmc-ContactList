@@ -1,24 +1,85 @@
-// Import necessary hooks and functions from React.
-import { useContext, useReducer, createContext } from "react";
-import storeReducer, { initialStore } from "../store"  // Import the reducer and the initial state.
+import { useReducer, useEffect } from "react";
 
-// Create a context to hold the global state of the application
-// We will call this global state the "store" to avoid confusion while using local states
-const StoreContext = createContext()
+const unique_url = "esmc_contact_list"; 
+const baseUrl = `https://playground.4geeks.com/contact/agendas/${unique_url}/contacts`;
 
-// Define a provider component that encapsulates the store and warps it in a context provider to 
-// broadcast the information throught all the app pages and components.
-export function StoreProvider({ children }) {
-    // Initialize reducer with the initial state.
-    const [store, dispatch] = useReducer(storeReducer, initialStore())
-    // Provide the store and dispatch method to all child components.
-    return <StoreContext.Provider value={{ store, dispatch }}>
-        {children}
-    </StoreContext.Provider>
-}
+const initialState = {
+  contacts: [],
+};
 
-// Custom hook to access the global state and dispatch function.
-export default function useGlobalReducer() {
-    const { dispatch, store } = useContext(StoreContext)
-    return { dispatch, store };
-}
+const reducer = (state, action) => {
+  switch (action.type) {
+    case "SET_CONTACTS":
+      return { ...state, contacts: action.payload };
+    default:
+      return state;
+  }
+};
+
+
+export const useGlobalReducer = () => {
+  const [store, dispatch] = useReducer(reducer, initialState);
+
+  const getContacts = async () => {
+    try {
+      const res = await fetch(baseUrl);
+      const data = await res.json();
+      dispatch({ type: "SET_CONTACTS", payload: data.contacts || [] });
+    } catch (err) {
+      console.error("Error fetching contacts:", err);
+    }
+  };
+
+
+  const addContact = async (contact) => {
+    const contactList = { ...contact, unique_url: unique_url };
+    
+    try {
+      await fetch(baseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(contactList),
+      });
+      getContacts(); 
+    } catch (err) {
+      console.error("Error adding contact:", err);
+    }
+  };
+
+  const updateContact = async (id, updatedContact) => {
+    try {
+      await fetch(`https://playground.4geeks.com/contact/contacts/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedContact),
+      });
+      getContacts();
+    } catch (err) {
+      console.error("Error updating contact:", err);
+    }
+  };
+
+
+  const deleteContact = async (id) => {
+    try {
+      await fetch(`https://playground.4geeks.com/contact/contacts/${id}`, {
+        method: "DELETE",
+      });
+      getContacts();
+    } catch (err) {
+      console.error("Error deleting contact:", err);
+    }
+  };
+
+  useEffect(() => {
+    getContacts();
+  }, []);
+
+  return {
+    store,
+    actions: { getContacts, addContact, updateContact, deleteContact },
+  };
+};
+
+
+
