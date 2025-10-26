@@ -9,9 +9,8 @@ const ContactCard = ({ contact }) => {
   const [showModal, setShowModal] = useState(false);
 
   const handleDeleteClick = () => setShowModal(true);
-
-  const handleDeleteConfirm = () => {
-    actions.deleteContact(contact.id);
+  const handleDeleteConfirm = async () => {
+    await actions.deleteContact(contact.id);
     setShowModal(false);
   };
 
@@ -22,14 +21,13 @@ const ContactCard = ({ contact }) => {
           <div className="me-3">
             <img
               src="https://via.placeholder.com/150/0000FF/808080?text=MA"
-              alt={contact.full_name}
-              className="rounded-circle border border-secondary"
-              style={{ width: "80px", height: "80px", objectFit: "cover" }}
+              alt={contact.name}
+              className="rounded-circle border border-secondary contact-avatar"
             />
           </div>
 
           <div className="flex-grow-1">
-            <h5 className="card-title fw-bold mb-1">{contact.full_name}</h5>
+            <h5 className="card-title fw-bold mb-1">{contact.name}</h5>
             <p className="card-text mb-0 text-muted">
               <i className="fa-solid fa-location-dot me-2"></i>
               {contact.address}
@@ -44,28 +42,33 @@ const ContactCard = ({ contact }) => {
             </p>
           </div>
 
-          <div className="d-flex flex-column align-self-start">
+          <div className="d-flex align-items-start gap-3">
             <i
-              className="fa-solid fa-pencil text-secondary cursor-pointer mb-2"
-              style={{ cursor: "pointer" }}
+              className="fa-solid fa-pencil text-secondary cursor-pointer"
+              role="button"
+              title="Edit contact"
               onClick={() => navigate(`/edit-contact/${contact.id}`)}
-            ></i>
+            />
             <i
               className="fa-solid fa-trash-can text-danger cursor-pointer"
-              style={{ cursor: "pointer" }}
+              role="button"
+              title="Delete contact"
               onClick={handleDeleteClick}
-            ></i>
+            />
           </div>
         </div>
       </div>
+
       <ModalConfirm
         show={showModal}
         onHide={() => setShowModal(false)}
         onConfirm={handleDeleteConfirm}
-        contactName={contact.full_name}
+        contactName={contact.name}
       />
     </div>
   );
 };
 
 export default ContactCard;
+
+

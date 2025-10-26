@@ -1,11 +1,9 @@
 import { useReducer, useEffect } from "react";
 
-const unique_url = "esmc_contact_list"; 
-const baseUrl = `https://playground.4geeks.com/contact/agendas/${unique_url}/contacts`;
+const agendaSlug = "esmc_contact_list";
+const API_BASE = "https://playground.4geeks.com/contact";
 
-const initialState = {
-  contacts: [],
-};
+const initialState = { contacts: [] };
 
 const reducer = (state, action) => {
   switch (action.type) {
@@ -16,63 +14,100 @@ const reducer = (state, action) => {
   }
 };
 
-
 export const useGlobalReducer = () => {
   const [store, dispatch] = useReducer(reducer, initialState);
 
+  const ensureAgendaExists = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/agendas/${agendaSlug}`);
+      if (res.status === 404) {
+        const create = await fetch(`${API_BASE}/agendas/${agendaSlug}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", accept: "application/json" },
+          body: JSON.stringify({ name: agendaSlug, description: "My agenda" }),
+        });
+        if (!create.ok) {
+          const j = await create.json().catch(() => null);
+          throw new Error(j?.detail || `Agenda create failed (HTTP ${create.status})`);
+        }
+      }
+    } catch (err) {
+      console.error("ensureAgendaExists:", err);
+    }
+  };
+
   const getContacts = async () => {
     try {
-      const res = await fetch(baseUrl);
-      const data = await res.json();
-      dispatch({ type: "SET_CONTACTS", payload: data.contacts || [] });
+      const res = await fetch(`${API_BASE}/agendas/${agendaSlug}/contacts`, {
+        headers: { accept: "application/json" },
+      });
+      const data = await res.json().catch(() => ([]));
+      const list = Array.isArray(data) ? data : (data?.contacts ?? []);
+      dispatch({ type: "SET_CONTACTS", payload: list });
     } catch (err) {
-      console.error("Error fetching contacts:", err);
+      console.error("getContacts:", err);
+      dispatch({ type: "SET_CONTACTS", payload: [] });
     }
   };
-
 
   const addContact = async (contact) => {
-    const contactList = { ...contact, unique_url: unique_url };
-    
-    try {
-      await fetch(baseUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(contactList),
-      });
-      getContacts(); 
-    } catch (err) {
-      console.error("Error adding contact:", err);
+    const payload = {
+      name: (contact.name ?? "").trim(),
+      email: (contact.email ?? "").trim(),
+      phone: (contact.phone ?? "").trim(),
+      address: (contact.address ?? "").trim(),
+    };
+    if (!payload.name || !payload.email) {
+      throw new Error("Name and Email are required.");
     }
+    const res = await fetch(`${API_BASE}/agendas/${agendaSlug}/contacts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => null);
+      throw new Error(j?.detail || `Create failed (HTTP ${res.status})`);
+    }
+    await getContacts();
   };
 
-  const updateContact = async (id, updatedContact) => {
-    try {
-      await fetch(`https://playground.4geeks.com/contact/contacts/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedContact),
-      });
-      getContacts();
-    } catch (err) {
-      console.error("Error updating contact:", err);
+  const updateContact = async (id, contact) => {
+    const payload = {
+      name: (contact.name ?? "").trim(),
+      email: (contact.email ?? "").trim(),
+      phone: (contact.phone ?? "").trim(),
+      address: (contact.address ?? "").trim(),
+    };
+    if (!payload.name || !payload.email) {
+      throw new Error("Name and Email are required.");
     }
+    const res = await fetch(`${API_BASE}/agendas/${agendaSlug}/contacts/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => null);
+      throw new Error(j?.detail || `Update failed (HTTP ${res.status})`);
+    }
+    await getContacts();
   };
-
 
   const deleteContact = async (id) => {
-    try {
-      await fetch(`https://playground.4geeks.com/contact/contacts/${id}`, {
-        method: "DELETE",
-      });
-      getContacts();
-    } catch (err) {
-      console.error("Error deleting contact:", err);
+    const res = await fetch(`${API_BASE}/agendas/${agendaSlug}/contacts/${id}`, {
+      method: "DELETE",
+      headers: { accept: "application/json" },
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => null);
+      throw new Error(j?.detail || `Delete failed (HTTP ${res.status})`);
     }
+    await getContacts();
   };
 
   useEffect(() => {
-    getContacts();
+    ensureAgendaExists().then(getContacts);
   }, []);
 
   return {
@@ -80,6 +115,3 @@ export const useGlobalReducer = () => {
     actions: { getContacts, addContact, updateContact, deleteContact },
   };
 };
-
-
-

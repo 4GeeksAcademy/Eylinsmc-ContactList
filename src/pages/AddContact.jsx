@@ -8,59 +8,51 @@ const AddContact = () => {
   const { id } = useParams();
 
   const [formData, setFormData] = useState({
-    full_name: "",
+    name: "",
     email: "",
     phone: "",
     address: "",
   });
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (id) {
-      const contact = store.contacts.find((c) => c.id === parseInt(id));
-
-      if (contact) {
+      const c = store.contacts.find((c) => c.id === Number(id));
+      if (c) {
         setFormData({
-          full_name: contact.full_name,
-          email: contact.email,
-          phone: contact.phone,
-          address: contact.address,
+          name: c.name ?? "",
+          email: c.email ?? "",
+          phone: c.phone ?? "",
+          address: c.address ?? "",
         });
       }
     }
   }, [id, store.contacts]);
 
-
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((p) => ({ ...p, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const contactData = {
-      full_name: formData.full_name,
-      email: formData.email,
-      phone: formData.phone,
-      address: formData.address,
-    };
-
-
-    if (id) {
-      await actions.updateContact(id, contactData);
-    } else {
-      await actions.addContact(contactData);
+    setError("");
+    try {
+      if (id) await actions.updateContact(id, formData);
+      else await actions.addContact(formData);
+      navigate("/");
+    } catch (err) {
+      setError(err.message || "Operation failed");
     }
-
-    navigate("/");
   };
 
   return (
     <div className="container mt-5">
       <div className="row justify-content-center">
         <div className="col-12 col-md-10 col-lg-8">
-          <h1 className="text-center mb-4">
-            {id ? "Edit contact" : "Add a new contact"}
-          </h1>
+          <h1 className="text-center mb-4">{id ? "Edit contact" : "Add a new contact"}</h1>
+
+          {error && <div className="alert alert-danger">{error}</div>}
 
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
@@ -69,8 +61,8 @@ const AddContact = () => {
                 type="text"
                 className="form-control"
                 placeholder="Full Name"
-                name="full_name"
-                value={formData.full_name}
+                name="name"
+                value={formData.name}
                 onChange={handleChange}
                 required
               />
@@ -98,7 +90,6 @@ const AddContact = () => {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                required
               />
             </div>
 
@@ -111,17 +102,16 @@ const AddContact = () => {
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                required
               />
             </div>
 
             <button type="submit" className="btn btn-primary w-100 mt-3">
-              save
+              Save
             </button>
           </form>
 
           <Link to="/">
-            <p className="text-primary text-left mt-3" style={{ textDecoration: 'underline' }}>
+            <p className="text-primary mt-3 text-decoration-underline">
               or get back to contacts
             </p>
           </Link>
@@ -132,3 +122,4 @@ const AddContact = () => {
 };
 
 export default AddContact;
+
